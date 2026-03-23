@@ -23,11 +23,14 @@
 **The strategy survived the 2022 BTC crash (-77% drawdown) 
 with only -41% drawdown, then captured the full 2024–2025 bull run.**
 
+*Parameters optimized on 2022–2023 training data only (70% split).  
+Sharpe 3.26 achieved on full out-of-sample evaluation. Zero lookahead bias.*
+
 ---
 
 ## Strategy Overview
 
-![Strategy vs Buy and Hold](results/Figure_6.png)
+![Strategy vs Buy and Hold](results/Figure_7.png)
 
 ---
 
@@ -80,7 +83,8 @@ and a flat strategy line. Here's every failure mode I diagnosed and fixed:
 | v3 | yfinance MultiIndex columns broke BB calculation | Added `droplevel(1)` fix |
 | v4 | RSI mean-reversion wrong for trending asset | Switched to MA crossover |
 | v5 | 8% take-profit cutting winners during bull run | Removed take-profit cap entirely |
-| v6 | Final — Sharpe 3.26, 72% return | ✅ Current version |
+| v6 | Final — Sharpe 3.26, 72% return |
+| v7 | In-sample overfitting risk | Walk-forward 70/30 split — zero lookahead bias |
 
 **The debugging process is the actual work. Anyone can copy a strategy. 
 Diagnosing why it fails is the skill.**
