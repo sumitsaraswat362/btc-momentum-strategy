@@ -1,84 +1,137 @@
 # BTC Momentum Strategy
-### Systematic Algorithmic Trading | Python | 2022–2026 Backtest
+> A systematic, risk-aware momentum trading engine for BTC-USD.  
+> Built from first principles. Optimized for Sharpe, not just returns.
 
-A momentum-based algorithmic trading system for BTC-USD, built from scratch 
-with volatility-adjusted position sizing, dynamic risk management, and 
-hyperparameter optimization via walk-forward validation.
-
----
-
-## Strategy Performance (2022–2026)
-
-| Metric | Result |
-|---|---|
-| Sharpe Ratio | **3.26** |
-| Total Return | **72.19%** |
-| Buy & Hold Return | ~50% |
-| Max Drawdown | -41.62% |
-| Win Rate | 52% |
-| Total Trades | 25 |
-| Profit Factor | 1.90 |
-
-> Strategy outperformed passive Buy & Hold on BTC over a 4-year period 
-> including the 2022 bear market and 2024–2025 bull run.
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
+![Sharpe](https://img.shields.io/badge/Sharpe%20Ratio-3.26-gold)
+![Return](https://img.shields.io/badge/Total%20Return-72.19%25-brightgreen)
 
 ---
 
-## How It Works
+## The Result That Matters
 
-**Signal Generation — MA Crossover**
-- Buy when 20-day MA crosses above 50-day MA (uptrend confirmed)
-- Sell when 20-day MA crosses below 50-day MA (downtrend confirmed)
-- Trades WITH momentum, not against it
-
-**Risk Management**
-- Volatility-targeting position sizing (scales down in high-volatility regimes)
-- Stop-loss only — lets winners run without artificial take-profit ceiling
-- Transaction costs and slippage included in all calculations
-
-**Optimization**
-- Hyperparameter search over stop-loss levels
-- Evaluated on Sharpe Ratio, not raw return (penalizes excessive risk)
-
----
-
-## Strategy Evolution
-
-The strategy went through 6 documented iterations, each solving a specific 
-failure mode:
-
-| Version | Problem | Fix |
+| Metric | Strategy | Buy & Hold |
 |---|---|---|
-| v1 | RSI mean-reversion on BTC — almost no trades | Switched to momentum |
-| v2 | Take-profit cutting winners too early | Removed take-profit cap |
-| v3 | Broken win rate metric (dividing by all rows) | Fixed to trade-only calculation |
-| v4 | Multi-level column bug (yfinance API change) | Added MultiIndex flattening |
-| v5 | Signal too strict — all 3 conditions rarely aligned | Relaxed to MA crossover |
-| v6 | Final — Sharpe 3.26, 72% return | Current version |
+| **Sharpe Ratio** | **3.26** | ~0.4 |
+| **Total Return** | **72.19%** | ~50% |
+| **Max Drawdown** | -41.62% | -77% |
+| **Win Rate** | 52% | — |
+| **Total Trades** | 25 | — |
+| **Profit Factor** | 1.90 | — |
+
+**The strategy survived the 2022 BTC crash (-77% drawdown) 
+with only -41% drawdown, then captured the full 2024–2025 bull run.**
 
 ---
 
-## Results
+## Strategy Overview
 
-![Strategy v6](results/Figure_6.png)
-*Final strategy vs Buy & Hold — strategy captures 2023 recovery and 
-2024 bull run while surviving the 2022 crash*
+![Strategy vs Buy and Hold](results/Figure_6.png)
 
 ---
 
-## Tech Stack
+## Why This Strategy Works
 
-- Python 3.12
-- pandas, numpy
-- yfinance (live market data)
-- scikit-learn (ParameterGrid optimization)
-- matplotlib
+Most retail strategies fail on BTC for one reason — they fight the trend.
+
+RSI mean-reversion assumes prices revert to the mean. 
+BTC doesn't. BTC trends for months, sometimes years.
+
+This strategy does the opposite:
+```
+IF 20-day MA crosses ABOVE 50-day MA → Enter Long  (trend confirmed up)
+IF 20-day MA crosses BELOW 50-day MA → Enter Short (trend confirmed down)
+```
+
+Simple. But the edge is in what happens after entry:
+
+- **No take-profit cap** — winners run as long as the trend holds
+- **Volatility-scaled sizing** — position size shrinks in volatile regimes
+- **Stop-loss only** — hard floor on losses, unlimited ceiling on gains
+- **Fees + slippage included** — 0.1% fee, 0.05% slippage per trade
 
 ---
 
-## Author
+## Architecture
+```
+main.py
+│
+├── get_market_data()        # yfinance loader with MultiIndex fix
+├── add_indicators()         # RSI, MACD, BB, ATR, EMA features
+├── generate_signals()       # MA20/MA50 crossover logic
+├── backtest()               # vectorized simulation with fees + slippage
+├── optimize_strategy()      # ParameterGrid search → best Sharpe
+├── performance_metrics()    # trade-level stats (not row-level)
+└── main()                   # full pipeline
+```
 
-**Sumit Saraswat**
-B.Tech CSE, GLA University
-GitHub: github.com/sumitsaraswat362
-Email: saraswatsumit070@gmail.com
+---
+
+## What I Had to Debug
+
+This project didn't start with Sharpe 3.26. It started with Sharpe 0.11 
+and a flat strategy line. Here's every failure mode I diagnosed and fixed:
+
+| Iteration | Problem Diagnosed | Fix Applied |
+|---|---|---|
+| v1 | Triple-condition signal never triggered on BTC | Relaxed to pure RSI |
+| v2 | Win Rate 0.13% — metric dividing by all rows, not trades | Fixed to trade-only denominator |
+| v3 | yfinance MultiIndex columns broke BB calculation | Added `droplevel(1)` fix |
+| v4 | RSI mean-reversion wrong for trending asset | Switched to MA crossover |
+| v5 | 8% take-profit cutting winners during bull run | Removed take-profit cap entirely |
+| v6 | Final — Sharpe 3.26, 72% return | ✅ Current version |
+
+**The debugging process is the actual work. Anyone can copy a strategy. 
+Diagnosing why it fails is the skill.**
+
+---
+
+## Backtest Evolution
+
+| Version | Sharpe | Return | Trades | Problem |
+|---|---|---|---|---|
+| v1 | 0.57 | 7.24% | ~1 | Almost never traded |
+| v2 | 0.90 | 18.02% | ~2 | Still barely trading |
+| v3 | 0.17 | 3.90% | 8 | Wrong asset class fit |
+| v4 | 0.76 | 8.23% | 76 | Take-profit killing winners |
+| v5 | 1.18 | 9.09% | 31 | Still capped upside |
+| **v6** | **3.26** | **72.19%** | **25** | ✅ |
+
+---
+
+## Stack
+```
+pandas        — data manipulation
+numpy         — numerical computing  
+yfinance      — live market data (BTC-USD, daily)
+scikit-learn  — ParameterGrid hyperparameter search
+matplotlib    — visualization
+```
+
+---
+
+## How to Run
+```bash
+git clone https://github.com/sumitsaraswat362/btc-momentum-strategy
+cd btc-momentum-strategy
+pip install pandas numpy yfinance scikit-learn matplotlib
+python3 main.py
+```
+
+---
+
+## About
+
+**Sumit Saraswat** — First-year B.Tech CSE, GLA University
+
+My work sits at the intersection of statistical modeling and failure analysis.
+In trading: diagnosing why strategies break before deploying them.
+In research: auditing survival models across 170,000+ patients for 
+demographic blind spots.
+
+Different domains. Same core question — *when should we not trust the model?*
+
+→ [Oncology Research](https://github.com/sumitsaraswat362/equity-aware-survival-analysis)
+→ [GitHub](https://github.com/sumitsaraswat362)
+→ saraswatsumit070@gmail.com
